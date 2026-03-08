@@ -45,7 +45,7 @@ The project compares:
 
 ```text
 arithmetic-reasoning-transformers/
-├── code.ipynb
+├── arithmetic-reasoning-transformers.ipynb
 ├── README.md
 ├── requirements.txt
 ├── data_task1/              # generated CSV splits
@@ -143,22 +143,3 @@ Core libraries used in the notebook include:
 - bitsandbytes
 - matplotlib
 - jupyter
-
-## Notes
-
-- The Qwen/LoRA section is most suitable for a CUDA-enabled environment.
-- `bitsandbytes` may require extra system compatibility depending on platform.
-- Generated datasets, checkpoints, and cached outputs do not need to be committed unless you want to publish trained artifacts.
-- For a clean GitHub repo, it is best to keep large checkpoints and generated CSV files out of version control.
-
-## Suggested Improvements
-
-- move training code from notebook cells into Python modules,
-- add CLI scripts for training and evaluation,
-- log experiments with TensorBoard or Weights & Biases,
-- benchmark more arithmetic operators and larger number ranges,
-- compare chain-of-thought prompting versus direct answer generation.
-
-## License
-
-This repository is shared as part of a personal machine learning and language modeling portfolio.
