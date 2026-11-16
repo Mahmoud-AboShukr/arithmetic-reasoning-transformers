@@ -1,145 +1,74 @@
-# Arithmetic Reasoning with Tiny Transformer and Qwen LoRA
+# Arithmetic reasoning with Transformers and reinforcement learning
 
-This repository explores **character-level arithmetic reasoning** using two contrasting language-modeling approaches:
+An experimental notebook comparing a **character-level Transformer trained from scratch**, **Qwen2.5-0.5B-Instruct with LoRA**, and **REINFORCE/PPO policy-training experiments** on synthetic addition and subtraction.
 
-1. a **custom Tiny Transformer** trained from scratch, and  
-2. **Qwen2.5-0.5B-Instruct** adapted with **LoRA / QLoRA-style fine-tuning**.
+The question is whether a model learns arithmetic that survives changes in numbers and prompt formatting, rather than only performing well on familiar examples.
 
-The project focuses on controlled generalization for simple symbolic math, using synthetic addition and subtraction expressions with carefully designed train, validation, reinforcement-learning prompt, and test splits.
+## Inspect a result first
 
-## Project Overview
+Saved outputs in the [notebook](arithmetic-reasoning-transformers.ipynb) show the following Qwen LoRA evaluation snapshot:
 
-The core task is to predict the correct numeric answer for arithmetic prompts such as:
+| Split | Exact-match accuracy | Evaluation limit |
+| --- | --- | --- |
+| Validation | 96.4% | Up to 500 examples |
+| Seen test | 97.5% | Up to 1,000 examples |
+| Unseen-number test | 97.2% | Up to 1,000 examples |
+| Unseen-format test | 96.2% | Up to 1,000 examples |
 
-```text
-103 - 88 =
-57 + 21 =
+Exact match means that the generated answer matches the expected answer under that evaluator's parsing rules. These are archived notebook outputs, not a newly reproduced result or evidence that Qwen outperforms the other models.
+
+**Reproducibility note:** later checkpoint-reload cells give near-zero scores for Tiny Transformer models whose earlier evaluations were much higher. That inconsistency needs a clean rerun and checkpoint/tokenizer/evaluator checks before publishing a definitive cross-model or RL comparison. No claim of an RL improvement is made here.
+
+## Experiment design
+
+For prompts such as `103 - 88 =`, generate the answer autoregressively. The custom Transformer uses a character vocabulary; Qwen uses its pretrained tokenizer and chat formatting.
+
+```mermaid
+flowchart TD
+  D["Synthetic addition and subtraction"] --> S["Train / validation / RL prompts / test splits"]
+  S --> T["Custom Transformer: supervised training"]
+  S --> Q["Qwen: LoRA fine-tuning"]
+  T --> R["REINFORCE and PPO experiments"]
+  T --> E["Exact match by split, operator and operand length"]
+  Q --> E
+  R --> E
 ```
 
-Rather than treating this as a standard classification problem, the notebook formulates it as a **causal language modeling task** at the **character level**, where the model generates the final answer digits autoregressively.
+- **Supervised training:** a causal Transformer with positional encoding, attention, and prompt-masked answer loss.
+- **Parameter-efficient adaptation:** Qwen LoRA adapters, with optional 4-bit quantisation.
+- **Policy optimisation:** REINFORCE with a reward baseline and PPO experiments targeting arithmetic-answer rewards.
+- **Generalisation tests:** held-out operand sets and prompt-format changes, reported separately from seen examples.
 
-The project compares:
-- a lightweight Transformer implemented manually in PyTorch,
-- a modern instruction-tuned large language model adapted with parameter-efficient fine-tuning,
-- performance across multiple distribution settings:
-  - **seen examples**
-  - **unseen operands**
-  - **unseen prompt formats**
+This is a controlled arithmetic study. It does not establish general mathematical reasoning or reliability on unrestricted language tasks.
 
-## Main Features
-
-- Synthetic dataset generation for arithmetic expressions
-- Controlled holdout of operand sets for out-of-distribution testing
-- Evaluation on formatting shifts such as spacing variations
-- Character-level vocabulary and masked prompt-to-answer training
-- Custom implementation of:
-  - positional encoding
-  - multi-head attention
-  - transformer blocks
-  - greedy decoding
-- Fine-tuning pipeline for **Qwen2.5-0.5B-Instruct**
-- Support for **LoRA** and optional **4-bit quantization**
-- Exact-match accuracy reporting by split, operator type, and number length
-
-## Repository Structure
-
-```text
-arithmetic-reasoning-transformers/
-├── arithmetic-reasoning-transformers.ipynb
-├── README.md
-├── requirements.txt
-├── data_task1/              # generated CSV splits
-├── checkpoints/             # Tiny Transformer checkpoints
-└── checkpoints_qwen_lora/   # Qwen LoRA checkpoints
-```
-
-## Methodology
-
-### 1. Data Generation
-The notebook creates synthetic arithmetic samples using:
-- variable digit lengths,
-- balanced addition and subtraction,
-- operand holdout sets for true unseen-number evaluation,
-- formatting perturbations for robustness testing.
-
-Generated splits include:
-- pretraining train set,
-- validation set,
-- RL prompt set,
-- seen test set,
-- unseen-number test set,
-- unseen-format test set.
-
-### 2. Tiny Transformer from Scratch
-A compact Transformer language model is implemented directly in PyTorch with:
-- learned embeddings,
-- sinusoidal positional encodings,
-- masked self-attention,
-- feed-forward layers,
-- causal next-token prediction.
-
-The loss is masked over the prompt so the model is only trained to generate the answer.
-
-### 3. Qwen + LoRA / QLoRA
-The project also adapts **Qwen2.5-0.5B-Instruct** using:
-- Hugging Face Transformers,
-- PEFT LoRA adapters,
-- optional bitsandbytes quantization,
-- prompt formatting with system and user messages.
-
-This allows comparison between a small custom model and a pretrained instruction model under parameter-efficient fine-tuning.
-
-## Installation
-
-Create a virtual environment and install dependencies:
+## Run the notebook
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/Mahmoud-AboShukr/arithmetic-reasoning-transformers.git
+cd arithmetic-reasoning-transformers
+python -m venv .venv
+# Linux/macOS: source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+jupyter notebook arithmetic-reasoning-transformers.ipynb
 ```
 
-For notebook use:
+Use a fresh kernel and follow the data-generation and model sections in order. Inspect local paths, device settings, and checkpoint selections before running. The pretrained-model and optional bitsandbytes quantisation stages require a compatible environment and access to Hugging Face model files; CUDA is recommended for training.
 
-```bash
-jupyter notebook
-```
+The notebook contains several experimental branches and saved execution states. It is a research notebook, not an unattended end-to-end training script. Before comparing runs, keep the data split, model configuration, tokenizer, decoding rules, and checkpoint identity fixed.
 
-## Usage
+## Included and generated files
 
-Open the notebook and run it in order:
+| Included in Git | Generated locally |
+| --- | --- |
+| Notebook, requirements, and README | CSV datasets, checkpoints, evaluation CSVs, and final-artifact exports |
 
-```bash
-jupyter notebook code.ipynb
-```
+Directories such as `data_task1/`, `checkpoints/`, `checkpoints_qwen_lora/`, `checkpoints_rl/`, and `results/` are local outputs, not pretrained assets supplied in this checkout.
 
-The workflow includes:
-1. generating arithmetic datasets,
-2. building the character-level vocabulary,
-3. training the Tiny Transformer,
-4. evaluating exact-match accuracy,
-5. loading Qwen,
-6. attaching LoRA adapters,
-7. fine-tuning and evaluating the Qwen-based model.
+## Reproduce an evaluation carefully
 
-## Evaluation
-
-The notebook measures:
-- exact-match accuracy,
-- operator-specific performance,
-- accuracy by operand length,
-- robustness to unseen numbers,
-- robustness to unseen prompt formatting.
-
-This makes the project useful for studying **algorithmic generalization** and **reasoning robustness** in language models.
-
-## Dependencies
-
-Core libraries used in the notebook include:
-- PyTorch
-- pandas
-- scikit-learn
-- transformers
-- accelerate
-- peft
-- bitsandbytes
-- matplotlib
-- jupyter
+1. Generate and retain the split files and seeds.
+2. Train or load the matching model with its original vocabulary/tokenizer.
+3. Evaluate exact match separately for seen examples, unseen numbers, and unseen formats.
+4. Record sample counts, parsing rules, checkpoint path, and dependency versions.
+5. Resolve the saved-output inconsistency above before treating the notebook as a verified benchmark.
